@@ -1,22 +1,24 @@
 # Bolsillo
 
-Tu propio Pocket: aprietas el botón del iPhone, grabas, y minutos después tienes un Google Doc con el resumen y la transcripción en Drive, listo para preguntarle a Claude.
+A do-it-yourself pocket recorder ("bolsillo" is Spanish for "pocket"): press the iPhone's Action Button, record a conversation, and a few minutes later a Google Doc with a summary and a full transcript appears in Google Drive, ready to search from Claude.
 
 ```
-iPhone (atajo)
-  ├─ POST /api/start      → URL de subida
-  ├─ PUT  audio           → directo a Drive: Bolsillo/_entrantes
-  └─ POST /api/process    → Vercel pasa el audio a AssemblyAI
-                              ↓ (webhook cuando termina)
-                            /api/webhook → Claude resume → Google Doc en Bolsillo/
-                                         → borra el audio y la transcripción de AssemblyAI
+iPhone (Shortcut)
+  ├─ POST /api/start      → upload URL
+  ├─ PUT  audio           → straight to Drive: Bolsillo/_entrantes
+  └─ POST /api/process    → Vercel hands the audio to AssemblyAI
+                              ↓ (webhook when transcription is done)
+                            /api/webhook → Claude summarizes → Google Doc in Bolsillo/
+                                         → deletes the audio and the AssemblyAI transcript
 ```
 
-- **Solo queda texto.** El audio se borra cuando el documento ya existe. Si algo falla, el audio se conserva en `_entrantes` y aparece un documento `⚠️ Error` en la carpeta.
-- **Permiso mínimo en Drive** (`drive.file`): la app solo ve los archivos que ella misma creó.
-- **Costo estimado:** unos $0,26 por hora grabada. AssemblyAI cobra $0,23/h (con $50 de crédito inicial) y Claude Haiku 4.5 el resto, según la longitud.
+- **Only text is kept.** The audio is deleted once the Doc exists. If something fails, the audio stays in `_entrantes` (Spanish for "incoming") and an `⚠️ Error` Doc appears in the folder.
+- **Minimal Drive permission** (`drive.file`): the app can only see the files it created itself.
+- **Speaker labels:** AssemblyAI separates speakers, and Claude replaces a label with a name only when the conversation makes it clear who is speaking.
+- **Notes in the conversation's language.** The summary is written in whatever language was mainly spoken.
+- **Estimated cost:** about $0.26 per recorded hour. AssemblyAI charges $0.23/h (with $50 of starting credit), and Claude Haiku 4.5 accounts for the rest, depending on length.
 
-## Instalación
+## Setup
 
 ### 1. Variables
 
@@ -28,28 +30,30 @@ npm install
 npm run setup
 ```
 
-Esto crea `.env.local`. Completa ahí:
+This creates `.env.local`, including a random `BOLSILLO_SECRET`. Fill in:
 
 - `ASSEMBLYAI_API_KEY`: [assemblyai.com/dashboard/api-keys](https://www.assemblyai.com/dashboard/api-keys)
 - `ANTHROPIC_API_KEY`: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
 
 ### 2. Google Drive
 
-En [console.cloud.google.com](https://console.cloud.google.com), con la cuenta de Google donde quieres guardar las notas:
+In [console.cloud.google.com](https://console.cloud.google.com), signed in with the Google account where you want to keep the notes:
 
-1. Crea un proyecto llamado `Bolsillo`.
-2. Busca **Google Drive API** y actívala.
-3. Ve a **Google Auth Platform** y configúrala como **Externa**.
-4. En **Público**, pulsa **Publicar app**. Si queda en modo de prueba, el permiso caduca a los 7 días y todo deja de funcionar.
-5. En **Clientes**, crea uno de tipo **App de escritorio** y copia el ID y el secreto a `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`.
+1. Create a project called `Bolsillo`.
+2. Search for **Google Drive API** and enable it.
+3. Go to **Google Auth Platform** and set it up as **External**.
+4. Under **Audience**, click **Publish app**. If it stays in testing mode, the permission expires after 7 days and everything stops working.
+5. Under **Clients**, create a **Desktop app** client and copy its ID and secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
-Luego autoriza. Google mostrará "app no verificada": es tu propia app, entra por **Configuración avanzada → Ir a Bolsillo**.
+Google also asks for an app name, a homepage and a privacy policy before publishing. The deployed app serves both pages: `/` and `/privacy.html`.
+
+Then authorize. Google will show "app not verified": it is your own app, so go through **Advanced → Go to Bolsillo**.
 
 ```bash
 npm run google-auth
 ```
 
-### 3. Despliegue
+### 3. Deploy
 
 ```bash
 vercel login
@@ -59,7 +63,7 @@ vercel login
 vercel --prod --yes
 ```
 
-Copia la URL de producción a `PUBLIC_URL` en `.env.local` y publica con las variables:
+Copy the production URL into `PUBLIC_URL` in `.env.local`, then publish with the variables:
 
 ```bash
 npm run push-env
@@ -69,53 +73,55 @@ npm run push-env
 vercel --prod
 ```
 
-### 4. Prueba
+### 4. Test
 
 ```bash
-npm run e2e -- ruta/al/audio.m4a
+npm run e2e -- path/to/audio.m4a
 ```
 
-Debe aparecer un documento en la carpeta `Bolsillo` de Drive en un par de minutos.
+A Doc should appear in the `Bolsillo` folder in Drive within a couple of minutes.
 
-## El atajo del iPhone
+## The iPhone Shortcut
 
-En la app **Atajos**, crea uno llamado **Bolsillo** con estas acciones, en orden. `TU_URL` es tu `PUBLIC_URL` y `TU_CLAVE` es el `BOLSILLO_SECRET` de `.env.local`.
+In the **Shortcuts** app, create one called **Bolsillo** with these actions, in order. `YOUR_URL` is your `PUBLIC_URL`, and `YOUR_KEY` is the `BOLSILLO_SECRET` from `.env.local`.
 
-| # | Acción | Configuración |
-|---|--------|---------------|
-| 1 | **Grabar audio** | Empezar a grabar: *Inmediatamente*. Terminar: *Al tocar*. |
-| 2 | **Guardar archivo** | Audio grabado → iCloud Drive/Bolsillo. "Preguntar dónde guardar": apagado. Es la copia de seguridad si no hay señal. |
-| 3 | **Obtener contenido de URL** | `TU_URL/api/start`. Método POST. Encabezado `Authorization` = `Bearer TU_CLAVE`. |
-| 4 | **Obtener valor del diccionario** | Clave `upload_url`, del resultado del paso 3. |
-| 5 | **Obtener contenido de URL** | URL = valor del paso 4. Método PUT. Encabezado `Content-Type` = `audio/mp4`. Cuerpo: *Archivo* → Audio grabado. |
-| 6 | **Obtener valor del diccionario** | Clave `id`, del resultado del paso 5. |
-| 7 | **Obtener contenido de URL** | `TU_URL/api/process`. Método POST. Encabezado `Authorization` = `Bearer TU_CLAVE`. Cuerpo: *JSON*, campo `file_id` = valor del paso 6. |
-| 8 | **Eliminar archivos** | Archivo guardado en el paso 2. "Confirmar antes de eliminar": apagado. |
-| 9 | **Mostrar notificación** | "Grabación enviada". |
+| # | Action | Settings |
+|---|--------|----------|
+| 1 | **Record Audio** | Start Recording: *Immediately*. Finish Recording: *On Tap*. |
+| 2 | **Save File** | Recorded Audio → an iCloud Drive folder. "Ask Where to Save": off. This is the backup if there is no signal. |
+| 3 | **Get Contents of URL** | `YOUR_URL/api/start`. Method POST. Header `Authorization` = `Bearer YOUR_KEY`. |
+| 4 | **Get Dictionary Value** | Key `upload_url`, from the result of step 3. |
+| 5 | **Get Contents of URL** | URL = Dictionary Value from step 4. Method PUT. Header `Content-Type` = `audio/mp4`. Request Body: *File* → Recorded Audio. |
+| 6 | **Get Dictionary Value** | Key `id`, from the result of step 5. |
+| 7 | **Get Contents of URL** | `YOUR_URL/api/process`. Method POST. Header `Authorization` = `Bearer YOUR_KEY`. Request Body: *JSON*, field `file_id` = Dictionary Value from step 6. |
+| 8 | **Delete Files** | Saved File from step 2. "Delete Immediately": on. |
+| 9 | **Show Notification** | "Recording sent". |
 
-Asígnalo al botón: **Ajustes → Botón de acción → Atajo → Bolsillo**. Solo existe en iPhone 15 Pro y posteriores; en otros modelos usa **Ajustes → Accesibilidad → Tocar → Toque atrás**.
+If the Shortcut asks for permission to delete the file at the end, turn on **Settings → Apps → Shortcuts → Advanced → Allow Deleting Without Confirmation**.
 
-Antes de confiar en él, haz una grabación larga con la pantalla bloqueada y revisa que quede completa.
+Assign it to the button: **Settings → Action Button → Shortcut → Bolsillo**. The Action Button exists only on iPhone 15 Pro and later; on other models use **Settings → Accessibility → Touch → Back Tap**.
 
-## Preguntarle a Claude
+The notification only means the Shortcut finished; the Doc in Drive is what confirms a recording was processed. Before relying on it, make a long recording with the screen locked and check that it comes through complete.
 
-Con el conector de Google Drive activo, en Claude:
+## Asking Claude
 
-> Busca en mi carpeta Bolsillo: alguien me recomendó una empresa de parches adhesivos. ¿Quién fue y qué dijo?
+With the Google Drive connector enabled in Claude:
 
-> Revisa mis conversaciones recientes con asesores. ¿Dónde coinciden y dónde me han dado consejos opuestos?
+> Search my Bolsillo folder: someone recommended a company that makes adhesive patches. Who was it and what did they say?
 
-> Mañana me reúno con él otra vez. Recuérdame qué acordamos, qué prometí enviar y qué sigue abierto.
+> Go through my recent conversations with advisors. Where do they agree, and where have they given me opposite advice?
 
-## Si algo falla
+> I'm meeting him again tomorrow. Remind me what we agreed on, what I promised to send, and what is still open.
 
-Busca en Drive un documento `⚠️ Error`: indica en qué paso falló y el ID del audio. Para reintentar:
+## If something fails
+
+Look in Drive for an `⚠️ Error` Doc: it says which step failed and gives the audio file's ID. To retry:
 
 ```bash
-curl -X POST "$PUBLIC_URL/api/process" -H "Authorization: Bearer $BOLSILLO_SECRET" -H "Content-Type: application/json" -d '{"file_id":"ID_DEL_AUDIO"}'
+curl -X POST "$PUBLIC_URL/api/process" -H "Authorization: Bearer $BOLSILLO_SECRET" -H "Content-Type: application/json" -d '{"file_id":"AUDIO_FILE_ID"}'
 ```
 
-## Desarrollo
+## Development
 
 ```bash
 npm test
