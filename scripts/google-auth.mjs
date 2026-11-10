@@ -74,6 +74,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Abriendo Google. Entra con santiluengasg@gmail.com.\nSi no abre, usa:\n${authUrl}`);
+  console.log(`Abriendo Google. Entra con la cuenta donde quieres guardar las notas.\nSi no abre, usa:\n${authUrl}`);
   execFile("open", [authUrl], () => {});
 });

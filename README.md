@@ -35,7 +35,7 @@ Esto crea `.env.local`. Completa ahí:
 
 ### 2. Google Drive
 
-En [console.cloud.google.com](https://console.cloud.google.com), con `santiluengasg@gmail.com`:
+En [console.cloud.google.com](https://console.cloud.google.com), con la cuenta de Google donde quieres guardar las notas:
 
 1. Crea un proyecto llamado `Bolsillo`.
 2. Busca **Google Drive API** y actívala.
