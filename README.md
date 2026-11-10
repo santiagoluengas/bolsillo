@@ -14,7 +14,7 @@ iPhone (atajo)
 
 - **Solo queda texto.** El audio se borra cuando el documento ya existe. Si algo falla, el audio se conserva en `_entrantes` y aparece un documento `⚠️ Error` en la carpeta.
 - **Permiso mínimo en Drive** (`drive.file`): la app solo ve los archivos que ella misma creó.
-- **Costo estimado:** unos $0,30 por hora grabada. AssemblyAI cobra $0,23/h (con $50 de crédito inicial) y Claude Sonnet 5.5 el resto, según la longitud.
+- **Costo estimado:** unos $0,26 por hora grabada. AssemblyAI cobra $0,23/h (con $50 de crédito inicial) y Claude Haiku 4.5 el resto, según la longitud.
 
 ## Instalación
 

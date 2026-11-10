@@ -195,7 +195,7 @@ test("render: Markdown, escape y zona horaria", () => {
 });
 
 function fakeClient(message) {
-  return { beta: { messages: { stream: () => ({ finalMessage: async () => message }) } } };
+  return { messages: { stream: () => ({ finalMessage: async () => message }) } };
 }
 
 test("summarize: separa el título y maneja rechazo, vacío y truncado", async () => {
