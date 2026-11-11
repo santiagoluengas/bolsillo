@@ -101,7 +101,21 @@ If the Shortcut asks for permission to delete the file at the end, turn on **Set
 
 Assign it to the button: **Settings → Action Button → Shortcut → Bolsillo**. The Action Button exists only on iPhone 15 Pro and later; on other models use **Settings → Accessibility → Touch → Back Tap**.
 
-The notification only means the Shortcut finished; the Doc in Drive is what confirms a recording was processed. Before relying on it, make a long recording with the screen locked and check that it comes through complete.
+The notification only means the Shortcut finished; the Doc in Drive is what confirms a recording was processed.
+
+### Automatic retry from the Mac
+
+A long recording is a single upload of ~30 MB (about 48 MB per hour), and a Shortcut cannot retry it. If the connection drops mid-upload, iOS shows "The network connection was lost" and the Shortcut stops. The copy saved in step 2 is never deleted, though, and iCloud syncs it to the Mac.
+
+A launchd agent on the Mac checks the Shortcuts folder in iCloud Drive every 30 minutes. Any `Bolsillo*.m4a` older than an hour is a failed upload: it sends it the same way the Shortcut does and moves it to the Trash once the server has it. Nothing to do on the phone; the Mac only needs to be on at some point.
+
+```bash
+npm run install-recover    # install or update it (copies the script to ~/.local/bin)
+```
+
+```bash
+tail -20 ~/Library/Logs/bolsillo-recover.log    # what it sent
+```
 
 ## Asking Claude
 
