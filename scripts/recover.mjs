@@ -2,12 +2,13 @@
 //
 // El atajo guarda una copia del audio en iCloud Drive (carpeta de Atajos) antes de subirlo y
 // la borra solo si la subida terminó. Si una copia sigue ahí después de MIN_AGE_MIN minutos,
-// la subida falló: este script la manda por el mismo camino que el atajo y la mueve a la
-// papelera cuando el servidor ya la recibió.
+// la subida falló: este script la manda por el mismo camino que el atajo y la
+// borra definitivamente cuando el servidor ya la recibió (el audio queda en Drive/_entrantes
+// hasta que exista el Doc, así que no se pierde nada).
 //
 // Lo corre launchd cada 30 minutos (ver scripts/install-recover.sh). Uso manual:
 //   node --env-file=$HOME/.config/bolsillo/env scripts/recover.mjs
-import { existsSync, readdirSync, readFileSync, renameSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -45,13 +46,6 @@ async function send(path) {
   return id;
 }
 
-function moveToTrash(path, name) {
-  const trash = join(homedir(), ".Trash");
-  let target = join(trash, name);
-  if (existsSync(target)) target = join(trash, `${Date.now()}-${name}`);
-  renameSync(path, target);
-}
-
 if (!base || !secret) {
   log("Faltan PUBLIC_URL o BOLSILLO_SECRET");
   process.exit(1);
@@ -85,7 +79,7 @@ for (const name of entries.filter((n) => PATTERN.test(n)).sort()) {
   if (mtimeMs > cutoff) continue; // Puede que el iPhone todavía la esté subiendo.
   try {
     const id = await send(path);
-    moveToTrash(path, name);
+    unlinkSync(path);
     log(`Enviada ${name} (${(size / 1048576).toFixed(1)} MB) → Drive ${id}`);
   } catch (error) {
     failures += 1;
